@@ -1,0 +1,36 @@
+notes
+
+strategy: http://www.jagregory.com/abrash-black-book/#conways-game
+simulator (draw): http://www.cuug.ab.ca/dewara/life/life.html
+simulator (pre-defined): https://bitstorm.org/gameoflife/
+
+Keep 1 byte. use lowest byte for 0: this cell is dead. 1: this cell is alive. Then use 4 bytes to to keep track of the count of alive neighbors. (8 neighbors --> 4 bytes)
+
+Use 4 or 8 threads and split board horizontally for each thread.
+
+
+Further optimization:
+
+Keep a changelist to keep track of the cells that changed state (on to off/off to on) in this iteration. In the next generation, only the cells in the changelist and their neighbors need to be scanned again. (How to combine this with multi-threading? Each thread has its own changelist?)
+
+Keep 16 changelists.
+(split board horizontally into 16 rows and each uses its own CL)
+
+
+
+Use good compiler flags (O3???)
+
+Use openMP?
+http://www.bowdoin.edu/~ltoma/teaching/cs3225-GIS/fall16/Lectures/openmp.html
+
+Compiler flag -Ofast ? turns on more optimization compared to -O3
+Change it in Makefile.include
+
+reference
+https://github.com/MatthewHou/StudentWork-ECE454/blob/master/hw5/report.pdf
+https://github.com/connorjsmith/ece454/blob/master/lab5/report.pdf
+https://github.com/AldrichW/ece454/tree/master/hw5/hw5src
+https://github.com/Kevchen/ECE454/tree/master/hw5/hw5src
+
+Lock: lock for each row?
+
