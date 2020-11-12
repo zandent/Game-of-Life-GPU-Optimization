@@ -41,7 +41,7 @@ $(BITBOARD_EXE): $(BITBOARD_OBJS)
 %.o: %.c
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) $< -o $@
 %.o: %.cu
-	$(CC) -c $(CFLAGS) $(CPPFLAGS) $< -o $@
+	$(CC) -c $< -o $@
 
 %.verify.o: %.c
 	$(CC) -c $(CFLAGS) -DVERIFY_FLAG $(CPPFLAGS) $< -o $@
