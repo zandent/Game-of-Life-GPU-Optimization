@@ -1,8 +1,15 @@
 benchmarks/cpu_no_opt/src/initboard
 benchmarks/cpu_no_opt/src/gol
+benchmarks/cpu_no_opt/src/gol_verify
 benchmarks/cpu_no_opt/src/outputs/1k.bpm
 benchmarks/cpu_no_opt/src/*.o
 benchmarks/cpu_opt/src/initboard
 benchmarks/cpu_opt/src/gol
+benchmarks/cpu_opt/src/gol_verify
 benchmarks/cpu_opt/src/outputs/1k.bpm
 benchmarks/cpu_opt/src/*.o
+src/initboard
+src/gol
+src/gol_verify
+src/outputs/1k.bpm
+src/*.o

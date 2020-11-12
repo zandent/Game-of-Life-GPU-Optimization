@@ -3,7 +3,7 @@
  * The original sequential implementation resides here.
  * Do not modify this file, but you are encouraged to borrow from it
  ****************************************************************************/
-#include "life.h"
+#include "life_opt.h"
 #include "util.h"
 
 /**

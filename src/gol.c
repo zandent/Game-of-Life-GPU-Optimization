@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "life.h"
+#include "life_opt.h"
 #include "load.h"
 #include "save.h"
 
