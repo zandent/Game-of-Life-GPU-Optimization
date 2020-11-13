@@ -7,7 +7,7 @@
 #include <string.h>
 #include "pthread.h"
 #include <sys/time.h>
-
+#include <stddef.h>
 
 #define LIFE_MASK 0x01 //0b00000001
 #define ALIVE_MASK 0x01 //0b00000001

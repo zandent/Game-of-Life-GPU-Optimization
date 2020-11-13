@@ -5,6 +5,7 @@
  ****************************************************************************/
 #include "life_opt.h"
 #include "util.h"
+#include <stddef.h>
 
 /**
  * Swapping the two boards only involves swapping pointers, not
