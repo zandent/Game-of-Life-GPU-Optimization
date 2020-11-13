@@ -1,5 +1,6 @@
 #include <cuda_runtime.h>
 #include <sys/time.h>
+#include <stdio.h>
 
 extern "C" {
 	#include "life_opt.h"

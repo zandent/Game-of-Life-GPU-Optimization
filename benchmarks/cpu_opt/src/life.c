@@ -23,14 +23,12 @@
 
 //#define SHIRDEBUG 1
 
-#ifdef SHIRDEBUG
 #include <stdio.h>
-#endif
 
 // returns time in seconds
 static double getTimeStamp() {
     struct timeval tv ;
-    gettimeofday( &tv, NULL ) ;
+    gettimeofday( &tv, NULL) ;
     return (double) tv.tv_usec/1000000.0 + tv.tv_sec ;
 }
 
