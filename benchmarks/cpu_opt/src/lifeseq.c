@@ -5,6 +5,7 @@
  ****************************************************************************/
 #include "life.h"
 #include "util.h"
+#include <sys/time.h>
 
 /**
  * Swapping the two boards only involves swapping pointers, not
@@ -18,6 +19,11 @@
 
 #define BOARD( __board, __i, __j )  (__board[(__i) + LDA*(__j)])
 
+static double getTimeStamp() {
+    struct timeval tv ;
+    gettimeofday( &tv, NULL ) ;
+    return (double) tv.tv_usec/1000000.0 + tv.tv_sec ;
+}
 
     char*
 sequential_game_of_life (char* outboard, 
@@ -28,6 +34,7 @@ sequential_game_of_life (char* outboard,
 {
     /* HINT: in the parallel decomposition, LDA may not be equal to
        nrows! */
+    double timeStampA = getTimeStamp() ;
     const int LDA = nrows;
     int curgen, i, j;
 
@@ -61,6 +68,9 @@ sequential_game_of_life (char* outboard,
         SWAP_BOARDS( outboard, inboard );
 
     }
+    double timeStampD = getTimeStamp() ;
+    double total_time = timeStampD - timeStampA;
+    printf("CPU sequential game_of_life: %.6f\n", total_time);
     /* 
      * We return the output board, so that we know which one contains
      * the final result (because we've been swapping boards around).

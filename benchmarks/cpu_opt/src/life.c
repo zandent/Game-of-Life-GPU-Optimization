@@ -6,6 +6,7 @@
 #include "util.h"
 #include <string.h>
 #include "pthread.h"
+#include <sys/time.h>
 
 
 #define LIFE_MASK 0x01 //0b00000001
@@ -25,6 +26,13 @@
 #ifdef SHIRDEBUG
 #include <stdio.h>
 #endif
+
+// returns time in seconds
+static double getTimeStamp() {
+    struct timeval tv ;
+    gettimeofday( &tv, NULL ) ;
+    return (double) tv.tv_usec/1000000.0 + tv.tv_sec ;
+}
 
 pthread_mutex_t * row_locks = NULL;
 
@@ -360,6 +368,7 @@ char* game_of_life (char* outboard, char* inboard, const int nrows, const int nc
 {
     /* HINT: in the parallel decomposition, LDA may not be equal to
        nrows! */
+    double timeStampA = getTimeStamp() ;
     register int curgen;
 
     row_locks = (pthread_mutex_t *) malloc(nrows * sizeof(pthread_mutex_t));
@@ -393,6 +402,9 @@ char* game_of_life (char* outboard, char* inboard, const int nrows, const int nc
     {
         inboard[j] &= 0x01;
     }
+    double timeStampD = getTimeStamp() ;
+    double total_time = timeStampD - timeStampA;
+    printf("CPU optimized game_of_life: %.6f\n", total_time);
     return inboard;
 }
 

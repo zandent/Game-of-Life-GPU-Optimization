@@ -67,7 +67,7 @@ main (int argc, char* argv[])
   /*
    * Set verifyp to 1 if you want to turn on verification.
    */
-  const int verifyp = DO_VERIFY;
+  const int verifyp = 0;//DO_VERIFY;
   const int argc_min = 3;
   const int argc_max = 4;
 
@@ -142,7 +142,7 @@ main (int argc, char* argv[])
    * Evolve board gens_max ticks, and time the evolution.  You will
    * parallelize the game_of_life() function for this assignment.
    */
-  final_board = game_of_life (outboard, inboard, nrows, ncols, gens_max);
+  final_board = game_of_life_gpu (outboard, inboard, nrows, ncols, gens_max);
 
   /* Print (or save, depending on command-line argument <outfilename>)
      the final board */
@@ -150,26 +150,25 @@ main (int argc, char* argv[])
   if (output != stdout && output != stderr)
     fclose (output);
 
-  if (verifyp)
-    {
-      /* Make sure that outboard has the final state, so we can verify
-	 it.  Since we ping-pong between inboard and outboard, it
-	 could be either that inboard == final_board or that outboard
-	 == final_board */
-      copy_board (outboard, final_board, nrows, ncols);
+ //  if (verifyp)
+ //  {
+ //      /* Make sure that outboard has the final state, so we can verify
+	//  it.  Since we ping-pong between inboard and outboard, it
+	//  could be either that inboard == final_board or that outboard
+	//  == final_board */
+ //      copy_board (outboard, final_board, nrows, ncols);
 
-      /* Ping-pong between checkboard (contains the initial state) and
-	 inboard */
-      final_board = sequential_game_of_life (inboard, checkboard, nrows, ncols, gens_max);
+ //      //Ping-pong between checkboard (contains the initial state) and inboard
+ //      final_board = sequential_game_of_life (inboard, checkboard, nrows, ncols, gens_max);
 
-      if (boards_equalp (final_board, outboard, nrows, ncols))
-	printf ("Verification successful\n");
-      else
-	{
-	  fprintf (stderr, "*** Verification failed! ***\n");
-	  exit (EXIT_FAILURE);
-	}
-    }
+ //      if (boards_equalp (final_board, outboard, nrows, ncols))
+	// printf ("Verification successful\n");
+ //      else
+	// {
+	//   fprintf (stderr, "*** Verification failed! ***\n");
+	//   exit (EXIT_FAILURE);
+	// }
+ //  }
 
   /* Clean up */
   if (inboard != NULL)
