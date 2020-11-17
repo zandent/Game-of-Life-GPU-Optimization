@@ -13,3 +13,4 @@ src/gol
 src/gol_verify
 src/outputs/1k.bpm
 src/*.o
+.DS_Store
