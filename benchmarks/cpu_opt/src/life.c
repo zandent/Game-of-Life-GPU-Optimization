@@ -427,7 +427,7 @@ void compute_next_gen_bit(char* outboard, char* inboard, const int nrows, const 
     char myself, up_left, up, up_right, left, right, down_left, down, down_right;
     unsigned int idx;
     char result;
-    unsigned int bit;
+    int bit;
     char neighbor_count;
 
     ////////////////////////////// FIRST ROW /////////////////////////////////
@@ -452,7 +452,7 @@ void compute_next_gen_bit(char* outboard, char* inboard, const int nrows, const 
                      ((up & (0x01 << 6)) >> 6) + 
                      ((left & (0x01 << (8 - num_bits_in_last_col))) >> (8 - num_bits_in_last_col)) + 
                      ((myself & (0x01 << 6)) >> 6) + 
-                     ((down_left & (0x01 << (8 - num_bits_in_last_col))) >> num_bits_in_last_col) + 
+                     ((down_left & (0x01 << (8 - num_bits_in_last_col))) >> (8 - num_bits_in_last_col)) + 
                      ((down & (0x01 << 7)) >> 7) + 
                      ((down & (0x01 << 6)) >> 6);
     if ((((myself & (0x01 << 7)) >> 7) | neighbor_count) == 3)
@@ -571,12 +571,12 @@ void compute_next_gen_bit(char* outboard, char* inboard, const int nrows, const 
     //loop through the 8 bits
     //left most bit
     bit = 0;
-    neighbor_count = ((up_left & (0x01 << num_bits_in_last_col)) >> num_bits_in_last_col) + 
+    neighbor_count = ((up_left & (0x01))) + 
                      ((up & (0x01 << 7)) >> 7) + 
                      ((up & (0x01 << 6)) >> 6) + 
-                     ((left & (0x01 << num_bits_in_last_col)) >> num_bits_in_last_col) + 
+                     ((left & (0x01))) + 
                      ((myself & (0x01 << 6)) >> 6) + 
-                     ((down_left & (0x01 << num_bits_in_last_col)) >> num_bits_in_last_col) + 
+                     ((down_left & (0x01))) + 
                      ((down & (0x01 << 7)) >> 7) + 
                      ((down & (0x01 << 6)) >> 6);
     if ((((myself & (0x01 << 7)) >> 7) | neighbor_count) == 3)
@@ -618,14 +618,14 @@ void compute_next_gen_bit(char* outboard, char* inboard, const int nrows, const 
 
 
     ///////////////////////////////// MIDDLE ROWS /////////////////////////////////
-    //#pragma omp parallel for
+    #pragma omp parallel for
     for (row = 1; row < nrows - 1; row++)
     {
         unsigned int col_;
         char myself_, up_left_, up_, up_right_, left_, right_, down_left_, down_, down_right_;
         unsigned int idx_;
         char result_;
-        unsigned int bit_;
+        int bit_;
         char neighbor_count_;
         ////////// middle rows, first col ///////////
         col_ = 0;
@@ -648,7 +648,7 @@ void compute_next_gen_bit(char* outboard, char* inboard, const int nrows, const 
                          ((up_ & (0x01 << 6)) >> 6) + 
                          ((left_ & (0x01 << (8 - num_bits_in_last_col))) >> (8 - num_bits_in_last_col)) + 
                          ((myself_ & (0x01 << 6)) >> 6) + 
-                         ((down_left_ & (0x01 << (8 - num_bits_in_last_col))) >> num_bits_in_last_col) + 
+                         ((down_left_ & (0x01 << (8 - num_bits_in_last_col))) >> (8 - num_bits_in_last_col)) + 
                          ((down_ & (0x01 << 7)) >> 7) + 
                          ((down_ & (0x01 << 6)) >> 6);
         if ((((myself_ & (0x01 << 7)) >> 7) | neighbor_count_) == 3)
@@ -767,14 +767,17 @@ void compute_next_gen_bit(char* outboard, char* inboard, const int nrows, const 
         //loop through the 8 bits
         //left most bit
         bit_ = 0;
-        neighbor_count_ = ((up_left_ & (0x01 << num_bits_in_last_col)) >> num_bits_in_last_col) + 
+        neighbor_count_ = ((up_left_ & (0x01))) + 
                          ((up_ & (0x01 << 7)) >> 7) + 
-                         ((up_ & (0x01 << 6)) >> 6) + 
-                         ((left_ & (0x01 << num_bits_in_last_col)) >> num_bits_in_last_col) + 
-                         ((myself_ & (0x01 << 6)) >> 6) + 
-                         ((down_left_ & (0x01 << num_bits_in_last_col)) >> num_bits_in_last_col) + 
-                         ((down_ & (0x01 << 7)) >> 7) + 
-                         ((down_ & (0x01 << 6)) >> 6);
+                         ((left_ & (0x01))) + 
+                         ((down_left_ & (0x01))) + 
+                         ((down_ & (0x01 << 7)) >> 7);
+        if (num_bits_in_last_col > 1)
+        {
+            neighbor_count_ += ((up_ & (0x01 << 6)) >> 6) + 
+                               ((myself_ & (0x01 << 6)) >> 6) + 
+                               ((down_ & (0x01 << 6)) >> 6);
+        }
         if ((((myself_ & (0x01 << 7)) >> 7) | neighbor_count_) == 3)
         {
             result_ |= (0x01 << 7);
@@ -796,6 +799,7 @@ void compute_next_gen_bit(char* outboard, char* inboard, const int nrows, const 
             }
         }
         //right most bit
+        //what if only 1 bit in last column .....
         bit_ = 8 - num_bits_in_last_col;
         neighbor_count_ = ((up_ & (0x01 << (bit_ + 1))) >> (bit_ + 1)) + 
                          ((up_ & (0x01 << (bit_))) >> (bit_)) + 
@@ -818,9 +822,9 @@ void compute_next_gen_bit(char* outboard, char* inboard, const int nrows, const 
     ////////// last row, first col ///////////
     col = 0;
     idx = row * ncols_bit + col;
-    up_left_ = inboard[idx_ - 1];
-    up_ = inboard[idx_ - ncols_bit];
-    up_right_ = inboard[idx_ - ncols_bit + 1];
+    up_left = inboard[idx - 1];
+    up = inboard[idx - ncols_bit];
+    up_right = inboard[idx - ncols_bit + 1];
     left = inboard[idx + ncols_bit - 1];
     myself = inboard[idx];
     right = inboard[idx + 1];
@@ -836,7 +840,7 @@ void compute_next_gen_bit(char* outboard, char* inboard, const int nrows, const 
                      ((up & (0x01 << 6)) >> 6) + 
                      ((left & (0x01 << (8 - num_bits_in_last_col))) >> (8 - num_bits_in_last_col)) + 
                      ((myself & (0x01 << 6)) >> 6) + 
-                     ((down_left & (0x01 << (8 - num_bits_in_last_col))) >> num_bits_in_last_col) + 
+                     ((down_left & (0x01 << (8 - num_bits_in_last_col))) >> (8 - num_bits_in_last_col)) + 
                      ((down & (0x01 << 7)) >> 7) + 
                      ((down & (0x01 << 6)) >> 6);
     if ((((myself & (0x01 << 7)) >> 7) | neighbor_count) == 3)
@@ -880,9 +884,9 @@ void compute_next_gen_bit(char* outboard, char* inboard, const int nrows, const 
     for (col = 1; col < ncols_bit - 1; col++)
     {
         idx = row * ncols_bit + col;
-        up_left_ = inboard[idx_ - ncols_bit - 1];
-        up_ = inboard[idx_ - ncols_bit];
-        up_right_ = inboard[idx_ - ncols_bit + 1];
+        up_left = inboard[idx - ncols_bit - 1];
+        up = inboard[idx - ncols_bit];
+        up_right = inboard[idx - ncols_bit + 1];
         left = inboard[idx - 1];
         myself = inboard[idx];
         right = inboard[idx + 1];
@@ -942,9 +946,9 @@ void compute_next_gen_bit(char* outboard, char* inboard, const int nrows, const 
     ////////// last row, last col ///////////
     //col = ncols_bit - 1;
     idx = row * ncols_bit + col;
-    up_left = inboard[(nrows - 1)*(ncols_bit) + ncols_bit - 2];
-    up = inboard[(nrows - 1)*(ncols_bit) + ncols_bit - 1];
-    up_right = inboard[(nrows - 1)*(ncols_bit)];
+    up_left = inboard[idx - ncols_bit - 1];
+    up = inboard[idx - ncols_bit];
+    up_right = inboard[idx - ncols_bit - ncols_bit + 1];
     left = inboard[idx - 1];
     myself = inboard[idx];
     right = inboard[idx - ncols_bit + 1];
@@ -955,12 +959,12 @@ void compute_next_gen_bit(char* outboard, char* inboard, const int nrows, const 
     //loop through the 8 bits
     //left most bit
     bit = 0;
-    neighbor_count = ((up_left & (0x01 << num_bits_in_last_col)) >> num_bits_in_last_col) + 
+    neighbor_count = ((up_left & (0x01))) + 
                      ((up & (0x01 << 7)) >> 7) + 
                      ((up & (0x01 << 6)) >> 6) + 
-                     ((left & (0x01 << num_bits_in_last_col)) >> num_bits_in_last_col) + 
+                     ((left & (0x01))) + 
                      ((myself & (0x01 << 6)) >> 6) + 
-                     ((down_left & (0x01 << num_bits_in_last_col)) >> num_bits_in_last_col) + 
+                     ((down_left & (0x01))) + 
                      ((down & (0x01 << 7)) >> 7) + 
                      ((down & (0x01 << 6)) >> 6);
     if ((((myself & (0x01 << 7)) >> 7) | neighbor_count) == 3)
@@ -1070,14 +1074,14 @@ char* bit_game_of_life (char* outboard,
         for (j = 0; j < ncols_bit - 1; j++)
         {
             bit_result = bit_inboard[i*ncols_bit + j];
-            for (unsigned int bit_it = 7; bit_it >= 0; bit_it--)
+            for (int bit_it = 7; bit_it >= 0; bit_it--)
             {
                 inboard[i*ncols + j*8 + bit_it] = bit_result & 0x01;
                 bit_result >>= 1;
             }
         }
         bit_result = bit_inboard[i*ncols_bit + j];
-        for (unsigned int bit_it = 7; bit_it >= 0; bit_it--)
+        for (int bit_it = 7; bit_it >= 0; bit_it--)
         {
             if ((j*8 + bit_it) < ncols)
             {
