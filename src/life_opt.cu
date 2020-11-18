@@ -8,10 +8,15 @@ extern "C" {
 }
 extern "C"
 
+
+// 1: brute force implementation
+// 2: bit implementation
+#define GPU_IMPL_VERSION 2
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////// BIT IMPLEMENTATION, NO OPTIMIZATION ///////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+#if GPU_IMPL_VERSION == 2
 #define BYTES_WINDOW 8
 #define BYTES_PER_THREAD 1
 #define LIVECHECK(count, state) (!state && (count == (char) 3)) ||(state && (count >= 2) && (count <= 3))
@@ -102,9 +107,7 @@ static double getTimeStamp() {
 
 ////////// Game of life implementation //////////
 char* game_of_life_gpu (char* outboard, char* inboard, const int nrows, const int ncols, const int gens_max){
-#ifdef DEBUG
-printf("================== DEBUG MODE ===================\n");
-#endif
+  debug_print("================== DEBUG MODE ===================\n");
   debug_print("we're in game_of_life_gpu! # iters = %d\n", gens_max);
   double timeStampA = getTimeStamp() ;
 
@@ -153,12 +156,13 @@ printf("================== DEBUG MODE ===================\n");
 	printf("GPU game_of_life: %.6f\n", total_time);
 	return outboard;
 }
+#endif //GPU_IMPL_VERSION == 2
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////...//////// BRUTE FORCE, NO OPTIMIZATION ///////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
-/*
+#if GPU_IMPL_VERSION == 1
 #define LIVECHECK(count, state) (!state && (count == (char) 3)) ||(state && (count >= 2) && (count <= 3))
 __global__ void kernal(char* outboard, char* inboard, const int nrows, const int ncols, const int size){
   int ix = threadIdx.x + blockIdx.x*blockDim.x;
@@ -178,6 +182,8 @@ __global__ void kernal(char* outboard, char* inboard, const int nrows, const int
 ////////// Game of life implementation //////////
 
 char* game_of_life_gpu (char* outboard, char* inboard, const int nrows, const int ncols, const int gens_max){
+  debug_print("================== DEBUG MODE ===================\n");
+  debug_print("we're in game_of_life_gpu! # iters = %d\n", gens_max);
   double timeStampA = getTimeStamp() ;
   int size = ncols*nrows;
   int bytes = size*sizeof(char);
@@ -202,7 +208,9 @@ char* game_of_life_gpu (char* outboard, char* inboard, const int nrows, const in
   printf("GPU game_of_life: %.6f\n", total_time);
   return outboard;
 }
-*/
+#endif //GPU_IMPL_VERSION == 1
+
+
 
 
 
