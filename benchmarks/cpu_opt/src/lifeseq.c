@@ -6,6 +6,7 @@
 #include "life.h"
 #include "util.h"
 #include <sys/time.h>
+#include <stddef.h>
 
 /**
  * Swapping the two boards only involves swapping pointers, not

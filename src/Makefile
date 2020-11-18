@@ -26,10 +26,13 @@ BITBOARD_OBJS = bitboard.o random_bit.o
 EXES = $(GOL_EXE) $(BITBOARD_EXE)
 OBJS = $(GOL_OBJS) $(BITBOARD_OBJS)
 
-debug: CPPFLAGS += -DDEBUG
-debug: all
+NVCCFLAGS = 
 
 all: clean $(GOL_EXE) $(BITBOARD_EXE)
+
+debug: CFLAGS += -DDEBUG
+debug: NVCCFLAGS += -DDEBUG
+debug: clean $(GOL_EXE) $(BITBOARD_EXE)
 
 $(GOL_EXE): $(GOL_OBJS) 
 	$(LINKER) $(CFLAGS) $(LDFLAGS) $(GOL_OBJS) -o $@ 
@@ -43,7 +46,7 @@ $(BITBOARD_EXE): $(BITBOARD_OBJS)
 %.o: %.c
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) $< -o $@
 %.o: %.cu
-	$(CC) -c $< -o $@
+	$(CC) -c $(NVCCFLAGS) $< -o $@
 
 %.verify.o: %.c
 	$(CC) -c $(CFLAGS) -DVERIFY_FLAG $(CPPFLAGS) $< -o $@

@@ -99,10 +99,10 @@ static double getTimeStamp() {
  * Game of life implementation
  ****************************************************************************/
 char* game_of_life_gpu (char* outboard, char* inboard, const int nrows, const int ncols, const int gens_max){
-  
-  debug_print("we're in game_of_life_gpu!\n");
-  int a = 1;
-  debug_print("we're in game_of_life_gpu %d!\n", a);
+#ifdef DEBUG
+printf("================== DEBUG MODE ===================\n");
+#endif
+  debug_print("we're in game_of_life_gpu! # iters = %d\n", gens_max);
   double timeStampA = getTimeStamp() ;
 
   int ncolsInBytes = ((ncols+BYTES_WINDOW-1)/BYTES_WINDOW);
