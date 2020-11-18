@@ -10,11 +10,18 @@ extern "C"
 #define BYTES_PER_THREAD 1
 #define LIVECHECK(count, state) (!state && (count == (char) 3)) ||(state && (count >= 2) && (count <= 3))
 void ByteToBitCell(char* in, char* out, int row, int col, int colInBytes){
+  memset(out,0,row*colInBytes*sizeof(char));
   for(int i = 0; i < row; i ++){
     for(int j = 0; j < colInBytes; j++){
       for(int k = 0; k < BYTES_WINDOW; k ++){
         out[j+i*colInBytes] |= (in[k + j*BYTES_WINDOW + i*col] << (BYTES_WINDOW-k-1));
+//        printf("%d ", in[k + j*BYTES_WINDOW + i*col]);
+//        for (int ii = 0; ii < 8; ii++) {
+//          printf("%d", !!((out[j+i*colInBytes] << ii) & 0x80));
+//        }
+//        printf("\n");
       }
+//      printf("\n\n");
     }
   }
 }
@@ -98,6 +105,22 @@ char* game_of_life_gpu (char* outboard, char* inboard, const int nrows, const in
   char parsed_inboard[nrows*ncolsInBytes];
   char parsed_outboard[nrows*ncolsInBytes];
   ByteToBitCell(inboard, parsed_inboard, nrows, ncols, ncolsInBytes);
+//  for (int ii = 0; ii < nrows; ii++){ 
+//    for (int jj = 0; jj < ncols; jj++){ 
+//      printf ("%d", inboard[jj+ii*ncols]);
+//    }
+//    printf("\n");
+//  }
+//  printf("\n");
+//  for (int ii = 0; ii < nrows; ii++){ 
+//    for (int jj = 0; jj < ncolsInBytes; jj++){ 
+//      //printf ("%x", parsed_inboard[jj+ii*ncols]&0xff);
+//      for (int i = 0; i < 8; i++) {
+//        printf("%d", !!((parsed_inboard[jj+ii*ncolsInBytes] << i) & 0x80));
+//      }
+//    }
+//    printf("\n");
+//  }
 	double timeStampA = getTimeStamp() ;
 	cudaMalloc((void **)&d_bufA,bytes);
 	cudaMalloc((void **)&d_bufB,bytes);

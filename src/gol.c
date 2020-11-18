@@ -75,6 +75,7 @@ main (int argc, char* argv[])
   char* inboard = NULL;
   char* outboard = NULL;
   char* checkboard = NULL;
+  char* checkinboard = NULL;
   char* final_board = NULL;
   int nrows = 0;
   int ncols = 0;
@@ -136,6 +137,8 @@ main (int argc, char* argv[])
     {
       checkboard = make_board (nrows, ncols);
       copy_board (checkboard, inboard, nrows, ncols);
+      checkinboard = make_board (nrows, ncols);
+      copy_board (checkinboard, inboard, nrows, ncols);
     }
 
   /* 
@@ -165,14 +168,22 @@ main (int argc, char* argv[])
  printf ("Verification successful\n");
      else
  {
+  printf("Input is:\n");
+  for (int ii = 0; ii < nrows; ii++){ 
+    for (int jj = 0; jj < ncols; jj++){ 
+      printf ("%d", checkinboard[jj+ii*ncols]);
+    }
+    printf("\n");
+  }
+  printf("Output is:\n");
   for (int ii = 0; ii < nrows; ii++){ 
     printf("row %d\n",ii);
     for (int jj = 0; jj < ncols; jj++){ 
-      printf ("%d", outboard[jj+ii*ncols]);
+      printf ("%d", final_board[jj+ii*ncols]);
     }
     printf("\n");
     for (int jj = 0; jj < ncols; jj++){ 
-      printf ("%d", final_board[jj+ii*ncols]);
+      printf ("%d", outboard[jj+ii*ncols]);
     }
     printf("\n");
     for (int jj = 0; jj < ncols; jj++){
