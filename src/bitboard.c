@@ -73,11 +73,16 @@ main (int argc, char* argv[])
     printf ("Number of rows: %d\n"
 	    "Number of cols: %d\n", 
 	    nrows, ncols);
-
-  printf ("P1\n%d %d\n", nrows, ncols);
-  for (ii = 0; ii < nrows; ii++) 
-    for (jj = 0; jj < ncols; jj++) 
-      printf ("%c\n", '0' + random_bit ());
-  
+  FILE* fptr;
+  fptr = fopen("inputs/test.pbm","w");
+  //printf ("P1\n%d %d\n", nrows, ncols);
+  fprintf (fptr, "P1\n%d %d\n", nrows, ncols);
+  for (ii = 0; ii < nrows; ii++){ 
+    for (jj = 0; jj < ncols; jj++){ 
+      //printf ("%c\n", '0' + random_bit ());
+      fprintf (fptr,"%c\n", '0' + random_bit ());
+    }
+  }
+  fclose(fptr);
   return 0;
 }

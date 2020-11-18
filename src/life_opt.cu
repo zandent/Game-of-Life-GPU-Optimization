@@ -7,7 +7,7 @@ extern "C" {
 }
 extern "C"
 #define BYTES_WINDOW 8
-#define BYTES_PER_THREAD 128
+#define BYTES_PER_THREAD 1
 #define LIVECHECK(count, state) (!state && (count == (char) 3)) ||(state && (count >= 2) && (count <= 3))
 void ByteToBitCell(char* in, char* out, int row, int col, int colInBytes){
   for(int i = 0; i < row; i ++){
@@ -33,12 +33,12 @@ __global__ void kernal(char* outboard, char* inboard, const int nrows, const int
 	int ix = (threadIdx.x + blockIdx.x*blockDim.x)*BYTES_PER_THREAD;
 	int iy = threadIdx.y + blockIdx.y*blockDim.y;
   if(ix<ncolsInBytes && iy<nrows){
-    int rx = (ix+1)%ncolsInBytes;
+    int lx = (ix+ncolsInBytes-1)%ncolsInBytes;
 	  int uy = (iy+nrows-1)%nrows;
 	  int dy = (iy+1)%nrows;
-    int row0 = (int) inboard[rx+ncolsInBytes*uy] << 16;
-    int row1 = (int) inboard[rx+ncolsInBytes*iy] << 16;
-    int row2 = (int) inboard[rx+ncolsInBytes*dy] << 16;
+    int row0 = (int) inboard[lx+ncolsInBytes*uy] << 16;
+    int row1 = (int) inboard[lx+ncolsInBytes*iy] << 16;
+    int row2 = (int) inboard[lx+ncolsInBytes*dy] << 16;
     row0 |= (int) inboard[ix+ncolsInBytes*uy] << 8;
     row1 |= (int) inboard[ix+ncolsInBytes*iy] << 8;
     row2 |= (int) inboard[ix+ncolsInBytes*dy] << 8;
@@ -47,7 +47,7 @@ __global__ void kernal(char* outboard, char* inboard, const int nrows, const int
     int base_x = ix;
 	  int pre_x;
     for(int i = 0; i < BYTES_PER_THREAD; i++){
-      if(base_x + i*BYTES_PER_THREAD < ncolsInBytes){
+      if((base_x + i*BYTES_PER_THREAD) < ncolsInBytes){
         pre_x = ix;
         ix = (ix + 1)%ncolsInBytes;
         row0 |= (int) inboard[ix+ncolsInBytes*uy];

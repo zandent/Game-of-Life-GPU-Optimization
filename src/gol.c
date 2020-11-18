@@ -67,7 +67,7 @@ main (int argc, char* argv[])
   /*
    * Set verifyp to 1 if you want to turn on verification.
    */
-  const int verifyp = 0;//DO_VERIFY;
+  const int verifyp = 1;//DO_VERIFY;
   const int argc_min = 3;
   const int argc_max = 4;
 
@@ -150,25 +150,44 @@ main (int argc, char* argv[])
   if (output != stdout && output != stderr)
     fclose (output);
 
- //  if (verifyp)
- //  {
- //      /* Make sure that outboard has the final state, so we can verify
-	//  it.  Since we ping-pong between inboard and outboard, it
-	//  could be either that inboard == final_board or that outboard
-	//  == final_board */
- //      copy_board (outboard, final_board, nrows, ncols);
+ if (verifyp)
+ {
+     /* Make sure that outboard has the final state, so we can verify
+  it.  Since we ping-pong between inboard and outboard, it
+  could be either that inboard == final_board or that outboard
+  == final_board */
+     copy_board (outboard, final_board, nrows, ncols);
 
- //      //Ping-pong between checkboard (contains the initial state) and inboard
- //      final_board = sequential_game_of_life (inboard, checkboard, nrows, ncols, gens_max);
+     //Ping-pong between checkboard (contains the initial state) and inboard
+     final_board = sequential_game_of_life (inboard, checkboard, nrows, ncols, gens_max);
 
- //      if (boards_equalp (final_board, outboard, nrows, ncols))
-	// printf ("Verification successful\n");
- //      else
-	// {
-	//   fprintf (stderr, "*** Verification failed! ***\n");
-	//   exit (EXIT_FAILURE);
-	// }
- //  }
+     if (boards_equalp (final_board, outboard, nrows, ncols))
+ printf ("Verification successful\n");
+     else
+ {
+  for (int ii = 0; ii < nrows; ii++){ 
+    printf("row %d\n",ii);
+    for (int jj = 0; jj < ncols; jj++){ 
+      printf ("%d", outboard[jj+ii*ncols]);
+    }
+    printf("\n");
+    for (int jj = 0; jj < ncols; jj++){ 
+      printf ("%d", final_board[jj+ii*ncols]);
+    }
+    printf("\n");
+    for (int jj = 0; jj < ncols; jj++){
+      if(final_board[jj+ii*ncols]!=outboard[jj+ii*ncols]){
+        printf ("^");
+      }else{
+        printf (" ");
+      }
+    }
+    printf("\n");
+  }
+   fprintf (stderr, "*** Verification failed! ***\n");
+   exit (EXIT_FAILURE);
+ }
+ }
 
   /* Clean up */
   if (inboard != NULL)
