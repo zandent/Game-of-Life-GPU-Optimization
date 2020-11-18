@@ -8,10 +8,15 @@ extern "C" {
 }
 extern "C"
 
+static double getTimeStamp() {
+    struct timeval tv ;
+    gettimeofday( &tv, NULL ) ;
+    return (double) tv.tv_usec/1000000.0 + tv.tv_sec ;
+}
 
 // 1: brute force implementation
 // 2: bit implementation
-#define GPU_IMPL_VERSION 2
+#define GPU_IMPL_VERSION 1
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////// BIT IMPLEMENTATION, NO OPTIMIZATION ///////////////////////////////////
@@ -97,13 +102,6 @@ __global__ void kernal(unsigned char* outboard, unsigned char* inboard, const in
     }
   }
 }
-
-static double getTimeStamp() {
-    struct timeval tv ;
-    gettimeofday( &tv, NULL ) ;
-    return (double) tv.tv_usec/1000000.0 + tv.tv_sec ;
-}
-
 
 ////////// Game of life implementation //////////
 char* game_of_life_gpu (char* outboard, char* inboard, const int nrows, const int ncols, const int gens_max){
