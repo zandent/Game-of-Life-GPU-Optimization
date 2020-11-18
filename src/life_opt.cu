@@ -1,6 +1,7 @@
 #include <cuda_runtime.h>
 #include <sys/time.h>
 #include <stdio.h>
+#include "util.h"
 
 extern "C" {
 	#include "life_opt.h"
@@ -98,6 +99,12 @@ static double getTimeStamp() {
  * Game of life implementation
  ****************************************************************************/
 char* game_of_life_gpu (char* outboard, char* inboard, const int nrows, const int ncols, const int gens_max){
+  
+  debug_print("we're in game_of_life_gpu!\n");
+  int a = 1;
+  debug_print("we're in game_of_life_gpu %d!\n", a);
+  double timeStampA = getTimeStamp() ;
+
   int ncolsInBytes = ((ncols+BYTES_WINDOW-1)/BYTES_WINDOW);
   int noRemainBits = ncols%BYTES_WINDOW;
 	int size = ncolsInBytes*nrows;
@@ -122,7 +129,6 @@ char* game_of_life_gpu (char* outboard, char* inboard, const int nrows, const in
 //    }
 //    printf("\n");
 //  }
-	double timeStampA = getTimeStamp() ;
 	cudaMalloc((void **)&d_bufA,bytes);
 	cudaMalloc((void **)&d_bufB,bytes);
 	cudaMemcpy( d_bufA, parsed_inboard, bytes, cudaMemcpyHostToDevice);
@@ -137,11 +143,11 @@ char* game_of_life_gpu (char* outboard, char* inboard, const int nrows, const in
 		d_bufB = temp;
 	}
 	cudaMemcpy(parsed_outboard, d_bufA, bytes, cudaMemcpyDeviceToHost);
-
-	double timeStampD = getTimeStamp() ;
-  double total_time = timeStampD - timeStampA;
-  printf("GPU game_of_life: %.6f\n", total_time);
-  BitCellToByte(parsed_outboard, outboard, nrows, ncols, ncolsInBytes);
+    BitCellToByte(parsed_outboard, outboard, nrows, ncols, ncolsInBytes);
+    
+    double timeStampD = getTimeStamp() ;
+	double total_time = timeStampD - timeStampA;
+	printf("GPU game_of_life: %.6f\n", total_time);
 	return outboard;
 }
 

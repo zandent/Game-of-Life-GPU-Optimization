@@ -8,6 +8,16 @@
  * as x and m are both positive.  This is helpful for computing
  * toroidal boundary conditions.
  */
+
+//debug print
+#ifdef DEBUG
+#define DEBUG_TEST 1
+#else
+#define DEBUG_TEST 0
+#endif
+#define debug_print(...) do { if (DEBUG_TEST) fprintf(stderr, __VA_ARGS__); } while (0)
+
+
 static inline int 
 mod (int x, int m)
 {

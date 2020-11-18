@@ -26,6 +26,8 @@ BITBOARD_OBJS = bitboard.o random_bit.o
 EXES = $(GOL_EXE) $(BITBOARD_EXE)
 OBJS = $(GOL_OBJS) $(BITBOARD_OBJS)
 
+debug: CPPFLAGS += -DDEBUG
+debug: all
 
 all: clean $(GOL_EXE) $(BITBOARD_EXE)
 
