@@ -9,11 +9,12 @@ extern "C"
 #define BYTES_WINDOW 8
 #define BYTES_PER_THREAD 1
 #define LIVECHECK(count, state) (!state && (count == (char) 3)) ||(state && (count >= 2) && (count <= 3))
-void ByteToBitCell(char* in, char* out, int row, int col, int colInBytes){
+void ByteToBitCell(char* in, unsigned char* out, int row, int col, int colInBytes){
   memset(out,0,row*colInBytes*sizeof(char));
   for(int i = 0; i < row; i ++){
     for(int j = 0; j < colInBytes; j++){
       for(int k = 0; k < BYTES_WINDOW; k ++){
+        //TODO: care about padding if remaining bits exist
         out[j+i*colInBytes] |= (in[k + j*BYTES_WINDOW + i*col] << (BYTES_WINDOW-k-1));
 //        printf("%d ", in[k + j*BYTES_WINDOW + i*col]);
 //        for (int ii = 0; ii < 8; ii++) {
@@ -25,7 +26,7 @@ void ByteToBitCell(char* in, char* out, int row, int col, int colInBytes){
     }
   }
 }
-void BitCellToByte(char* in, char* out, int row, int col, int colInBytes){
+void BitCellToByte(unsigned char* in, char* out, int row, int col, int colInBytes){
   for(int i = 0; i < row; i ++){
     for(int j = 0; j < colInBytes; j++){
       for(int k = 0; k < BYTES_WINDOW; k ++){
@@ -36,19 +37,19 @@ void BitCellToByte(char* in, char* out, int row, int col, int colInBytes){
     }
   }
 }
-__global__ void kernal(char* outboard, char* inboard, const int nrows, const int ncolsInBytes, const int noRemainBits){
+__global__ void kernal(unsigned char* outboard, unsigned char* inboard, const int nrows, const int ncolsInBytes, const int noRemainBits){
 	int ix = (threadIdx.x + blockIdx.x*blockDim.x)*BYTES_PER_THREAD;
 	int iy = threadIdx.y + blockIdx.y*blockDim.y;
   if(ix<ncolsInBytes && iy<nrows){
     int lx = (ix+ncolsInBytes-1)%ncolsInBytes;
 	  int uy = (iy+nrows-1)%nrows;
 	  int dy = (iy+1)%nrows;
-    int row0 = (int) inboard[lx+ncolsInBytes*uy] << 16;
-    int row1 = (int) inboard[lx+ncolsInBytes*iy] << 16;
-    int row2 = (int) inboard[lx+ncolsInBytes*dy] << 16;
-    row0 |= (int) inboard[ix+ncolsInBytes*uy] << 8;
-    row1 |= (int) inboard[ix+ncolsInBytes*iy] << 8;
-    row2 |= (int) inboard[ix+ncolsInBytes*dy] << 8;
+    uint row0 = (uint) inboard[lx+ncolsInBytes*uy] << 16;
+    uint row1 = (uint) inboard[lx+ncolsInBytes*iy] << 16;
+    uint row2 = (uint) inboard[lx+ncolsInBytes*dy] << 16;
+    row0 |= (uint) inboard[ix+ncolsInBytes*uy] << 8;
+    row1 |= (uint) inboard[ix+ncolsInBytes*iy] << 8;
+    row2 |= (uint) inboard[ix+ncolsInBytes*dy] << 8;
     char result = 0x00;
     char count = 0x00;
     int base_x = ix;
@@ -57,24 +58,24 @@ __global__ void kernal(char* outboard, char* inboard, const int nrows, const int
       if((base_x + i*BYTES_PER_THREAD) < ncolsInBytes){
         pre_x = ix;
         ix = (ix + 1)%ncolsInBytes;
-        row0 |= (int) inboard[ix+ncolsInBytes*uy];
-        row1 |= (int) inboard[ix+ncolsInBytes*iy];
-        row2 |= (int) inboard[ix+ncolsInBytes*dy];
+        row0 |= (uint) inboard[ix+ncolsInBytes*uy];
+        row1 |= (uint) inboard[ix+ncolsInBytes*iy];
+        row2 |= (uint) inboard[ix+ncolsInBytes*dy];
         if(pre_x == ncolsInBytes-1){
           int mask = ~(0x01<<(noRemainBits + 7));
           row0 &= mask;
           row1 &= mask;
           row2 &= mask;
-          row0 |= ((int) inboard[ix+ncolsInBytes*uy] & 0x80) << noRemainBits;
-          row1 |= ((int) inboard[ix+ncolsInBytes*iy] & 0x80) << noRemainBits;
-          row2 |= ((int) inboard[ix+ncolsInBytes*dy] & 0x80) << noRemainBits;
+          row0 |= ((uint) inboard[ix+ncolsInBytes*uy] & 0x80) << noRemainBits;
+          row1 |= ((uint) inboard[ix+ncolsInBytes*iy] & 0x80) << noRemainBits;
+          row2 |= ((uint) inboard[ix+ncolsInBytes*dy] & 0x80) << noRemainBits;
         }
         result = 0x00;
         for(int j = 0; j < BYTES_WINDOW; j++){
           result <<= 1;
-          count = (row0 & 0x010000) >> 16 + (row0 & 0x008000) >> 15 + (row0 & 0x004000) >> 14 +
-                  (row1 & 0x010000) >> 16 +                           (row1 & 0x004000) >> 14 +
-                  (row2 & 0x010000) >> 16 + (row2 & 0x008000) >> 15 + (row2 & 0x004000) >> 14;
+          count = ((row0 & 0x010000) >> 16) + ((row0 & 0x008000) >> 15) + ((row0 & 0x004000) >> 14) +
+                  ((row1 & 0x010000) >> 16) +                             ((row1 & 0x004000) >> 14) +
+                  ((row2 & 0x010000) >> 16) + ((row2 & 0x008000) >> 15) + ((row2 & 0x004000) >> 14);
           result |= LIVECHECK(count,(row1 & 0x008000));
           row0 <<= 1;
           row1 <<= 1;
@@ -101,9 +102,9 @@ char* game_of_life_gpu (char* outboard, char* inboard, const int nrows, const in
   int noRemainBits = ncols%BYTES_WINDOW;
 	int size = ncolsInBytes*nrows;
 	int bytes = size*sizeof(char);
-	char *d_bufA, *d_bufB;
-  char parsed_inboard[nrows*ncolsInBytes];
-  char parsed_outboard[nrows*ncolsInBytes];
+	unsigned char *d_bufA, *d_bufB;
+  unsigned char parsed_inboard[size];
+  unsigned char parsed_outboard[size];
   ByteToBitCell(inboard, parsed_inboard, nrows, ncols, ncolsInBytes);
 //  for (int ii = 0; ii < nrows; ii++){ 
 //    for (int jj = 0; jj < ncols; jj++){ 
@@ -131,7 +132,7 @@ char* game_of_life_gpu (char* outboard, char* inboard, const int nrows, const in
 		kernal<<<grid,block>>>(d_bufB, d_bufA, nrows, ncolsInBytes, noRemainBits);
     cudaDeviceSynchronize() ;
     //SWAP BOARDS
-    char * temp = d_bufA;
+    unsigned char * temp = d_bufA;
     d_bufA = d_bufB;
 		d_bufB = temp;
 	}
