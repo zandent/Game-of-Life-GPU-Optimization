@@ -67,7 +67,7 @@ main (int argc, char* argv[])
   /*
    * Set verifyp to 1 if you want to turn on verification.
    */
-  const int verifyp = 0;//DO_VERIFY;
+  const int verifyp = 1;//DO_VERIFY;
   const int argc_min = 3;
   const int argc_max = 4;
 
