@@ -25,7 +25,7 @@ static double getTimeStamp() {
 #if GPU_IMPL_VERSION == 3 
 #define BYTES_WINDOW 8
 #define BYTES_PER_THREAD 1
-#define LIVECHECK(count, state) (!state && (count == (char) 3)) ||(state && (count >= 2) && (count <= 3))
+#define LIVECHECK(count, state) ((!state && (count == (char) 3)) ||(state && (count >= 2) && (count <= 3)))
 #define COMPUTESTATE(x,y,index) ((index >> ((3 * 6 - 1) - (x+6*y))) & 0x1)
 void ByteToBitCell(char* in, unsigned char* out, int row, int col, int colInBytes){
   memset(out,0,row*colInBytes*sizeof(char));
