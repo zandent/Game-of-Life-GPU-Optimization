@@ -26,7 +26,7 @@ BITBOARD_OBJS = bitboard.o random_bit.o
 EXES = $(GOL_EXE) $(BITBOARD_EXE)
 OBJS = $(GOL_OBJS) $(BITBOARD_OBJS)
 
-NVCCFLAGS = 
+NVCCFLAGS = --ptxas-options=-v
 
 all: clean $(GOL_EXE) $(BITBOARD_EXE)
 
