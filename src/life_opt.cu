@@ -83,6 +83,32 @@ void BitCellToByte(unsigned char* in, char* out, int row, int col, int colInByte
     }
   }
 }
+//Method #1: create LUT in SM
+__device__ void SharedLUT(unsigned char* sm, int smx, int smy){
+  unsigned int tableIndex = 0;
+  unsigned char stateCombine = 0x00;
+  int j = 0;
+  for (tableIndex = (smx + blockDim.x*smy)*4; tableIndex < ((smx+blockDim.x*smy)*4+4) && tableIndex < 4096; tableIndex++){
+  unsigned char state = 0x00;
+  for(int i = 0; i < 2; i++){
+    char count = 0x00;
+    count += COMPUTESTATE(i+0,0,tableIndex);
+    count += COMPUTESTATE(i+0,1,tableIndex);
+    count += COMPUTESTATE(i+0,2,tableIndex);
+    count += COMPUTESTATE(i+1,0,tableIndex);
+    char centerState = COMPUTESTATE(i+1,1,tableIndex);
+    count += COMPUTESTATE(i+1,2,tableIndex);
+    count += COMPUTESTATE(i+2,0,tableIndex);
+    count += COMPUTESTATE(i+2,1,tableIndex);
+    count += COMPUTESTATE(i+2,2,tableIndex);
+    state |= (LIVECHECK(count,centerState)<<(1-i));
+  }
+  stateCombine |= ((state & 0x03) << (6-j*2));
+  j++;
+  }
+  sm[smx+blockDim.x*smy] = stateCombine;
+}
+//Method #2: move const LUT to sm
 __device__ void ConstToShared(unsigned char* sm, int smx, int smy){
   sm[smx+blockDim.x*smy] = lookUpTable[smx+blockDim.x*smy];
 }
