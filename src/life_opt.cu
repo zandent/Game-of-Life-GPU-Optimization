@@ -22,10 +22,271 @@ static double getTimeStamp() {
 // 6: lookup table 1 bit with const mem
 // 7: lookup table 1 bit compact with const mem
 // 8: add stream pipeline based on 5 //FASTEST
-// 9: add share mem based on 8
+// 9: share mem replace inboard based on 8
+//10: share mem replace LUT based on 8
 //**************************
-#define GPU_IMPL_VERSION 9
+#define GPU_IMPL_VERSION 8
 //**************************
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////// SHARE MEM LOOKUP TABLE 2 BIT COMPACT CONST MEM IMPLEMENTATION WITH STREAMS, SHAREMEM ///////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+#if GPU_IMPL_VERSION == 10
+#define BYTES_WINDOW 8
+#define BYTES_PER_THREAD 1 //FIXED DO NOT CHANGE
+#define LIVECHECK(count, state) ((!state && (count == (char) 3)) ||(state && (count >= 2) && (count <= 3)))
+#define COMPUTESTATE(x,y,index) ((index >> ((3 * 4 - 1) - (x+4*y))) & 0x1)
+
+void ByteToBitCell(char* in, unsigned char* out, int row, int col, int colInBytes){
+  memset(out,0,row*colInBytes*sizeof(char));
+  //unsigned char* out_offset = out + col;
+  for(int i = 0; i < row; i ++){
+    for(int j = 0; j < colInBytes; j++){
+      for(int k = 0; k < BYTES_WINDOW; k ++){
+        //TODO: care about padding if remaining bits exist
+        out[j+(i+1)*colInBytes] |= (in[k + j*BYTES_WINDOW + i*col] << (BYTES_WINDOW-k-1));
+      }
+    }
+  }
+  for(int j = 0; j < colInBytes; j++){
+    for(int k = 0; k < BYTES_WINDOW; k ++){
+      //TODO: care about padding if remaining bits exist
+      out[j+0*colInBytes] |= (in[k + j*BYTES_WINDOW +(row-1)*col] << (BYTES_WINDOW-k-1));
+      out[j+(row+1)*colInBytes] |= (in[k + j*BYTES_WINDOW + 0*col] << (BYTES_WINDOW-k-1));
+    }
+  }
+#ifdef DEBUG
+  for(int i = 0; i < row + 2; i ++){
+    for(int j = 0; j < colInBytes; j++){
+        //printf("%d ", in[k + j*BYTES_WINDOW + i*col]);
+        for (int ii = 0; ii < 8; ii++) {
+          //printf("%d", !!((out[j+i*colInBytes] << ii) & 0x80));
+        }
+        //printf("\n");
+    }
+  }
+#endif
+}
+void BitCellToByte(unsigned char* in, char* out, int row, int col, int colInBytes){
+  for(int i = 0; i < row; i ++){
+    for(int j = 0; j < colInBytes; j++){
+      for(int k = 0; k < BYTES_WINDOW; k ++){
+        if((k + j*BYTES_WINDOW + i*col) < row*col){
+          out[k + j*BYTES_WINDOW + i*col] = (in[j+i*colInBytes] >> (BYTES_WINDOW-k-1)) & 0x01;
+        }
+      }
+    }
+  }
+}
+__device__ void SharedLUT(unsigned char* sm, int smx, int smy){
+  unsigned int tableIndex = 0;
+  unsigned char stateCombine = 0x00;
+  int j = 0;
+  for (tableIndex = (smx + blockDim.x*smy)*4; tableIndex < ((smx+blockDim.x*smy)*4+4) && tableIndex < 4096; tableIndex++){
+  unsigned char state = 0x00;
+  for(int i = 0; i < 2; i++){
+    char count = 0x00;
+    count += COMPUTESTATE(i+0,0,tableIndex);
+    count += COMPUTESTATE(i+0,1,tableIndex);
+    count += COMPUTESTATE(i+0,2,tableIndex);
+    count += COMPUTESTATE(i+1,0,tableIndex);
+    char centerState = COMPUTESTATE(i+1,1,tableIndex);
+    count += COMPUTESTATE(i+1,2,tableIndex);
+    count += COMPUTESTATE(i+2,0,tableIndex);
+    count += COMPUTESTATE(i+2,1,tableIndex);
+    count += COMPUTESTATE(i+2,2,tableIndex);
+    state |= (LIVECHECK(count,centerState)<<(1-i));
+  }
+  stateCombine |= ((state & 0x03) << (6-j*2));
+  j++;
+  }
+  sm[smx+blockDim.x*smy] = stateCombine;
+}
+__device__ void SharedLUTSecond(unsigned char* sm_o, unsigned char* sm_i, int smx, int smy){
+  unsigned char state = 0x00;
+  for(int j = 0; j < 4; j++){
+    state |= ((sm_i[(smx+blockDim.x*smy)*4 + j] & 0x03) << (6-j*2));
+  }
+  sm_o[smx+blockDim.x*smy] = state;
+}
+__global__ void kernal(unsigned char* outboard, unsigned char* inboard, const int start_index, const int row_size, const int nrows, const int ncolsInBytes, const int noRemainBits){
+  int ix = (threadIdx.x + blockIdx.x*blockDim.x)*BYTES_PER_THREAD;
+  int iy = threadIdx.y + blockIdx.y*blockDim.y + start_index;
+  //__shared__ unsigned char tempLUT[4096];
+  __shared__ unsigned char LUT[1024];
+  SharedLUT(LUT,threadIdx.x,threadIdx.y);
+  __syncthreads();
+  //SharedLUTSecond(LUT,tempLUT,threadIdx.x,threadIdx.y);
+  //__syncthreads();
+  if(ix<ncolsInBytes && iy<row_size+start_index){
+    int lx = (ix+ncolsInBytes-1)%ncolsInBytes;
+    int uy = iy-1;
+    int dy = iy+1;
+    uint row0 = (uint) inboard[lx+ncolsInBytes*uy] << 16;
+    uint row1 = (uint) inboard[lx+ncolsInBytes*iy] << 16;
+    uint row2 = (uint) inboard[lx+ncolsInBytes*dy] << 16;
+    row0 |= (uint) inboard[ix+ncolsInBytes*uy] << 8;
+    row1 |= (uint) inboard[ix+ncolsInBytes*iy] << 8;
+    row2 |= (uint) inboard[ix+ncolsInBytes*dy] << 8;
+    int base_x = ix;
+    int pre_x;
+    for(int i = 0; i < BYTES_PER_THREAD; i++){
+      if((base_x + i*BYTES_PER_THREAD) < ncolsInBytes){
+        pre_x = ix;
+        ix = (ix + 1)%ncolsInBytes;
+        row0 |= (uint) inboard[ix+ncolsInBytes*uy];
+        row1 |= (uint) inboard[ix+ncolsInBytes*iy];
+        row2 |= (uint) inboard[ix+ncolsInBytes*dy];
+        if(pre_x == ncolsInBytes-1){
+          int mask = ~(0x01<<(noRemainBits + 7));
+          row0 &= mask;
+          row1 &= mask;
+          row2 &= mask;
+          row0 |= ((uint) inboard[ix+ncolsInBytes*uy] & 0x80) << noRemainBits;
+          row1 |= ((uint) inboard[ix+ncolsInBytes*iy] & 0x80) << noRemainBits;
+          row2 |= ((uint) inboard[ix+ncolsInBytes*dy] & 0x80) << noRemainBits;
+        }
+        unsigned int states0 = ((row0 & 0x1E000) >> 5) | ((row1 & 0x1E000) >> 9) | ((row2 & 0x1E000) >> 13);
+        unsigned int states1 = ((row0 & 0x7800) >> 3) | ((row1 & 0x7800) >> 7) | ((row2 & 0x7800) >> 11);
+        unsigned int states2 = ((row0 & 0x1E00) >> 1) | ((row1 & 0x1E00) >> 5) | ((row2 & 0x1E00) >> 9);
+        unsigned int states3 = ((row0 & 0x780) << 1) | ((row1 & 0x780) >> 3) | ((row2 & 0x780) >> 7);
+        unsigned char states0_shift = 6 - 2*(states0 & 0x03);
+        unsigned char states1_shift = 6 - 2*(states1 & 0x03);
+        unsigned char states2_shift = 6 - 2*(states2 & 0x03);
+        unsigned char states3_shift = 6 - 2*(states3 & 0x03);
+        outboard[pre_x + ncolsInBytes*iy] = (((LUT[states0 >> 2]>>states0_shift)&0x03)<<6) |
+                                            (((LUT[states1 >> 2]>>states1_shift)&0x03)<<4) | 
+                                            (((LUT[states2 >> 2]>>states2_shift)&0x03)<<2) | 
+                                            (((LUT[states3 >> 2]>>states3_shift)&0x03));
+        if(iy==1){outboard[pre_x + ncolsInBytes*(nrows+1)]=outboard[pre_x + ncolsInBytes*iy];}
+        else if(iy==nrows){outboard[pre_x + ncolsInBytes*0]=outboard[pre_x + ncolsInBytes*iy];}
+      }
+    }
+  }
+}
+#define NUM_STREAMS 4 
+////////// Game of life implementation //////////
+char* game_of_life_gpu (char* outboard, char* inboard, const int nrows, const int ncols, const int gens_max){
+  debug_print("================== DEBUG MODE ===================\n");
+  debug_print("we're in game_of_life_gpu! # iters = %d\n", gens_max);
+  double timeStampA = getTimeStamp() ;
+
+  // generate compact look up table
+  // LookUpTableToFileCompact();
+  // cudaDeviceSynchronize();
+  // return outboard;
+
+  int ncolsInBytes = ((ncols+BYTES_WINDOW-1)/BYTES_WINDOW);
+  int noRemainBits = ncols%BYTES_WINDOW;
+  int size = ncolsInBytes*(nrows+2);
+  int bytes = size*sizeof(char);
+  int size_out = ncolsInBytes*nrows;
+  int bytes_out = size_out*sizeof(char);
+  unsigned char *d_bufA, *d_bufB;
+  unsigned char *parsed_inboard;
+  unsigned char *parsed_outboard;
+  cudaMallocHost((void**)&parsed_inboard, bytes);
+  cudaMallocHost((void**)&parsed_outboard, bytes_out);
+  ByteToBitCell(inboard, parsed_inboard, nrows, ncols, ncolsInBytes);
+  cudaMalloc((void **)&d_bufA,bytes);
+  cudaMalloc((void **)&d_bufB,bytes);
+  //cudaMemcpy( d_bufA, parsed_inboard, bytes, cudaMemcpyHostToDevice);
+  // unsigned char* d_lookUpTable;
+  // cudaMalloc((void **)&d_lookUpTable,4096*sizeof(unsigned char));
+  // InitLookUpTable<<<4, 1024>>>(d_lookUpTable);
+  // cudaDeviceSynchronize() ;
+  //debug_print("lkt size %d %d\n", 262144*sizeof(unsigned char), sizeof(d_lookUpTable));
+  //for (int i = 0; i < 262144; i++){ 
+  //  debug_print("index %d\n",i);
+  //  for (int ii = 0; ii < 8; ii++) {
+  //    debug_print("%d", !!((d_lookUpTable[i] << ii) & 0x80));
+  //  }
+  //  debug_print("\n");
+  //}
+
+  //mem partition for streams
+  int batch_row[NUM_STREAMS];
+  for (int i = 0; i < NUM_STREAMS-1; i++){
+    batch_row[i] = nrows / NUM_STREAMS;
+  }
+  batch_row[NUM_STREAMS-1] = nrows - (NUM_STREAMS-1) * (int)(nrows/NUM_STREAMS);
+  int batch_index[NUM_STREAMS];
+  batch_index[0] = 1;
+  for (int i = 1; i < NUM_STREAMS; i++){
+    batch_index[i] = batch_index[i-1] + batch_row[i-1];
+  }
+
+  int mem_row[NUM_STREAMS];
+  int mem_row_size[NUM_STREAMS];
+  mem_row[0] = 0;
+  mem_row_size[0] = 1 + batch_row[0] + 1;
+  for (int i = 1; i < NUM_STREAMS; i++){
+    mem_row[i] = mem_row[i-1] + mem_row_size[i-1];
+    mem_row_size[i] = batch_row[i];
+  }
+  mem_row_size[NUM_STREAMS-1] = batch_row[NUM_STREAMS-1]-1;
+#ifdef DEBUG
+  for (int i = 0; i < NUM_STREAMS; i++){
+    printf("batch index %d ",batch_index[i]);
+    printf("batch size %d ",batch_row[i]);
+    printf("batch %d index at %d ",i,mem_row[i]);
+    printf("size is %d\n",mem_row_size[i]);
+  }
+#endif
+  dim3 block(32,32);
+  dim3 grid(((ncolsInBytes+BYTES_PER_THREAD-1)/BYTES_PER_THREAD+block.x-1)/block.x,(batch_row[0] + block.y-1)/block.y);
+  cudaStream_t stream[NUM_STREAMS+1];
+  cudaMemcpy( d_bufA, parsed_inboard, bytes, cudaMemcpyHostToDevice);
+  cudaDeviceSynchronize() ;
+  //for (int i = 1; i < NUM_STREAMS; i++){
+  //  debug_print("start stream %d\n",i);
+  //  cudaStreamCreate(&(stream[i]));
+  //  cudaMemcpyAsync(d_bufA + (batch_index[i-1]-1)*ncolsInBytes,
+  //                  parsed_inboard + (batch_row[i-1]-1)*ncolsInBytes,
+  //                  (batch_row[i-1]+2)*ncolsInBytes*sizeof(char),
+  //                  cudaMemcpyHostToDevice,stream[i]);
+  //}
+  ////sync all streams and done
+  //for(int i = 1; i < NUM_STREAMS; i++){
+  //  cudaStreamSynchronize(stream[i]);
+  //}
+  for (int i = 1; i < NUM_STREAMS + 1; i++){
+    //debug_print("start stream %d\n",i);
+    cudaStreamCreate(&(stream[i]));
+  }
+  for (int curgen = 0; curgen < gens_max; curgen++){
+    for (int i = 1; i < NUM_STREAMS + 1; i++){
+      //cudaStreamCreate(&(stream[i]));
+      kernal<<<grid,block,0,stream[i]>>>(d_bufB, d_bufA, batch_index[i-1], batch_row[i-1], nrows, ncolsInBytes, noRemainBits);
+    }
+  //sync all streams and done
+  for(int i = 1; i < NUM_STREAMS + 1; i++){
+    cudaStreamSynchronize(stream[i]);
+  }
+      //SWAP BOARDS
+      unsigned char * temp = d_bufA;
+      d_bufA = d_bufB;
+      d_bufB = temp;
+  }
+  //for (int i = 1; i < NUM_STREAMS; i++){
+  //  cudaMemcpyAsync(parsed_outboard + batch_index[i-1] - 1,
+  //                  d_bufA + batch_index[i-1],
+  //                  (batch_row[i-1]*ncolsInBytes)*sizeof(char),
+  //                  cudaMemcpyDeviceToHost,stream[i]);
+  //}
+  ////sync all streams and done
+  //for(int i = 1; i < NUM_STREAMS; i++){
+  //  debug_print("end stream %d\n",i);
+  //  cudaStreamSynchronize(stream[i]);
+  //}
+  cudaMemcpy(parsed_outboard, d_bufA + ncolsInBytes*sizeof(char), bytes_out, cudaMemcpyDeviceToHost);
+  BitCellToByte(parsed_outboard, outboard, nrows, ncols, ncolsInBytes);
+    
+  double timeStampD = getTimeStamp() ;
+  double total_time = timeStampD - timeStampA;
+  printf("GPU game_of_life: %.6f\n", total_time);
+  return outboard;
+}
+#endif //GPU_IMPL_VERSION == 10
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////// LOOKUP TABLE 2 BIT COMPACT CONST MEM IMPLEMENTATION WITH STREAMS, SHAREMEM ///////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
