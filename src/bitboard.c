@@ -34,7 +34,7 @@ main (int argc, char* argv[])
 
   init_random_bit (get_random_seed ());
 
-  if (argc != 3) 
+  if (argc != 4) 
     {
       fprintf (stderr, "Incorrect number of command-line arguments!\n");
       print_usage (argv[0]);
@@ -74,7 +74,7 @@ main (int argc, char* argv[])
 	    "Number of cols: %d\n", 
 	    nrows, ncols);
   FILE* fptr;
-  fptr = fopen("inputs/test.pbm","w");
+  fptr = fopen(argv[3],"w");
   //printf ("P1\n%d %d\n", nrows, ncols);
   fprintf (fptr, "P1\n%d %d\n", nrows, ncols);
   for (ii = 0; ii < nrows; ii++){ 

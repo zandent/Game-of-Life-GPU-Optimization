@@ -5,9 +5,13 @@ import sys
 import matplotlib.pyplot as plt
 import re
 times = []
+results = []
 copy = ["cp","life_opt.cu","life_opt.cu.bak"]
 subprocess.run(copy)
-for ver in range(1,9):
+versions = [1,2,3,5,8]
+#versions = [4,5,6,7]
+#versions = [8,9,10]
+for ver in versions:
     with open("life_opt.cu","w") as writer:
         with open("life_opt.cu.bak",'r') as reader:
             rdline = reader.readlines()
@@ -15,28 +19,53 @@ for ver in range(1,9):
         for line in rdline:
             version = re.search(r'\#define GPU\_IMPL\_VERSION',line)
             if version:
-                print (version.group())
+                #print (version.group())
                 writer.write("#define GPU_IMPL_VERSION "+str(ver)+'\n')
             else:
                 writer.write(line) 
     subprocess.run(["make"])
     time = []
     iteras = []
-    itera = int(sys.argv[1])
-    for i in range(itera,itera+20000,1000):
+    itera = 1
+    for i in range(itera,itera+100002,20000):
         iteras.append(i)
-        command = ['./gol', str(i), sys.argv[2], sys.argv[3]]
+        command = ['./gol', str(i), "inputs/1k.pbm", "outputs/1k.pbm"]
         print (command)
         stdout = subprocess.check_output(command).decode("utf-8")
-        time.append(float(stdout[18:]))
+        time.append(float(1048576)*i/float(stdout[18:])/1000000)
     times.append(time)
+    result = []
+    sizes = []
+    size = 128
+    it = 10000
+    for i in range(1,6):
+        sizes.append(size*size)
+        init = ['./initboard',str(size),str(size),'inputs/'+str(size)+'.pbm']
+        print (init)
+        subprocess.run(init)
+        command = ['./gol', str(it), 'inputs/'+str(size)+'.pbm','outputs/'+str(size)+'.pbm']
+        print (command)
+        stdout = subprocess.check_output(command).decode("utf-8")
+        result.append(float(size*size)*it/float(stdout[18:])/1000000)
+        size *= 2
+    results.append(result)
+copybk = ["cp","life_opt.cu.bak","life_opt.cu"]
+subprocess.run(copybk)
 remove = ["rm","-f","life_opt.cu.bak"]
 subprocess.run(remove)
 print(times)
 print(iteras)
+print(results)
+print(sizes)
+for timedata in results:
+    plt.plot(sizes, timedata, label="Version " + str(versions[results.index(timedata)]))
+plt.ylabel('Evaluated cells/sec in million')
+plt.xlabel('World size')
+plt.legend()
+plt.show()
 for timedata in times:
-    plt.plot(iteras, timedata, label="Version " + str(times.index(timedata)+1))
-plt.ylabel('Time')
+    plt.plot(iteras, timedata, label="Version " + str(versions[times.index(timedata)]))
+plt.ylabel('Evaluated cells/sec in million')
 plt.xlabel('Iteration')
 plt.legend()
 plt.show()

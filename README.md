@@ -17,7 +17,7 @@ ${PATH}/time -f "%e real" ./gol 10000 inputs/1k.pbm outputs/1k.pbm
 ```
 For testing and plotting time results
 ```
-./measure.py <min # of iterations> inputs/1k.pbm outputs/1k.pbm
+./measure.py
 ```
 ## Authors
 * shirwang
