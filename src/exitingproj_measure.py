@@ -31,7 +31,7 @@ for ver in versions:
     iteras = []
     run_time_iter = []
     run_time_ws = []
-    itera = 20001
+    itera = 1
     for i in range(itera,itera+100002,20000):
         iteras.append(i)
         command = ['./gol', str(i), "inputs/1k.pbm", "outputs/1k.pbm"]
@@ -57,33 +57,12 @@ for ver in versions:
         size *= 2
     results.append(result)
 #run cpu design, do make before run cpu design
-cputime = []
-cpu_run_time_iter = []
-cpu_run_time_ws = []
-itera = 20001
-for i in range(itera,itera+100002,20000):
-    command = ['../benchmarks/cpu_opt/src/gol', str(i), "../benchmarks/cpu_opt/src/inputs/1k.pbm", "../benchmarks/cpu_opt/src/outputs/1k.pbm"]
-    print (command)
-    stdout = subprocess.check_output(command).decode("utf-8")
-    cpu_run_time_iter.append(float(stdout[18:]))
-    cputime.append(float(1048576)*i/float(stdout[18:])/1000000)
-cpuresult = []
-size = 128
-cpuit = 10000
-for i in range(1,6):
-    init = ['../benchmarks/cpu_opt/src/initboard',str(size),str(size),'../benchmarks/cpu_opt/src/inputs/'+str(size)+'.pbm']
-    print (init)
-    subprocess.run(init)
-    command = ['../benchmarks/cpu_opt/src/gol', str(cpuit), '../benchmarks/cpu_opt/src/inputs/'+str(size)+'.pbm','../benchmarks/cpu_opt/src/outputs/'+str(size)+'.pbm']
-    print (command)        
-    stdout = subprocess.check_output(command).decode("utf-8")
-    cpu_run_time_ws.append(float(stdout[18:]))
-    cpuresult.append(float(size*size)*it/float(stdout[18:])/1000000)
-    size *= 2
 gpusp_times = [[i/times[0][j.index(i)] for i in j] for j in times]
 gpusp_results = [[i/results[0][j.index(i)] for i in j] for j in results]
-cpusp_time = [i/times[0][cputime.index(i)] for i in cputime]
-cpusp_result = [i/results[0][cpuresult.index(i)] for i in cpuresult]
+cpuresult = [490.2057584,1487.297963,5605.008382,16408.15075,34279.14804]
+cputime = [4.35896839,23270.81781,28687.14498,29939.29806,31301.2725,31383.52005]
+cpusp_result=[1.0369512,1.439222116,1.437666761,1.442585131,1.441784147]
+cpusp_time=[0.9480898761,1.446247093,1.46000002,1.509617581,1.531979318,1.578166499]
 copybk = ["cp","life_opt.cu.bak","life_opt.cu"]
 subprocess.run(copybk)
 remove = ["rm","-f","life_opt.cu.bak"]
@@ -98,12 +77,10 @@ print("cpu speedup ws results ",cpusp_result)
 print(sizes)
 print("gpu run_time_iter is:", run_time_iter)
 print("gpu run_time_ws is:", run_time_ws)
-print("cpu run_time_iter is:", cpu_run_time_iter)
-print("cpu run_time_ws is:", cpu_run_time_ws)
 
 for timedata in results[1:len(results)]:
     plt.plot(sizes, timedata, label= str(version_names[results.index(timedata)]))
-plt.plot(sizes, cpuresult, label= "CPU Design")
+plt.plot(sizes, cpuresult, label= "Existing Design")
 plt.ylabel('Evaluated cells/sec in million')
 plt.xlabel('World size')
 plt.legend()
@@ -111,7 +88,7 @@ plt.show()
 #plt.savefig("cps_ws.png")
 for timedata in times[1:len(times)]:
     plt.plot(iteras, timedata, label= str(version_names[times.index(timedata)]))
-plt.plot(iteras, cputime, label= "CPU Design")
+plt.plot(iteras, cputime, label= "Existing Design")
 plt.ylabel('Evaluated cells/sec in million')
 plt.xlabel('Iteration')
 plt.legend()
@@ -120,7 +97,7 @@ plt.show()
 
 for timedata in gpusp_results[1:len(gpusp_results)]:
     plt.plot(sizes, timedata, label= str(version_names[gpusp_results.index(timedata)]))
-plt.plot(sizes, cpusp_result, label= "CPU Design")
+plt.plot(sizes, cpusp_result, label= "Existing Design")
 plt.ylabel('Speed up')
 plt.xlabel('World size')
 plt.legend()
