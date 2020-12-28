@@ -8,12 +8,12 @@ make
 ```
 To run Game of Life in `src/`
 ```
-./initboard <# of rows> <# of cols>
+./initboard <# of rows> <# of cols> <generated file .pbm>
 ./gol <# of iterations> inputs/test.pbm <output file .pbm>
 ```
 To check timing
 ```
-${PATH}/time -f "%e real" ./gol 10000 inputs/1k.pbm outputs/1k.pbm
+${PATH}/time -f "%e real" ./gol <# of iterations> <input file .pbm> <output file .pbm>
 ```
 For testing and plotting time results
 ```
