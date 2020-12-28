@@ -9,9 +9,12 @@ results = []
 copy = ["cp","life_opt.cu","life_opt.cu.bak"]
 subprocess.run(copy)
 #NOTE: versions list must be start with 1
-versions = [1,2,3,5,8,9]
+#versions = [1,2,3,5,8,9]
+#version_names = ["Baseline","Bit Representation","LUT for 4 bits","Compact LUT for 2 bits","Pinned Memory","Appending First and Last Rows"]
+#version_names = ["Baseline","LUT for 2 bits","Compact LUT for 2 bits","LUT for 1 bit","Compact LUT for 1 bit"]
+version_names = ["Baseline","Appending First and Last Rows","Stream Pipelining","Shared Mem for inboard","Shared Mem for LUT"]
 #versions = [1,4,5,6,7]
-#versions = [1,8,9,10]
+versions = [1,9,10,11,12]
 for ver in versions:
     with open("life_opt.cu","w") as writer:
         with open("life_opt.cu.bak",'r') as reader:
@@ -61,13 +64,13 @@ print(iteras)
 print(results)
 print(sizes)
 for timedata in results[1:len(results)]:
-    plt.plot(sizes, timedata, label="Version " + str(versions[results.index(timedata)]))
+    plt.plot(sizes, timedata, label= str(version_names[results.index(timedata)]))
 plt.ylabel('Speed up')
 plt.xlabel('World size')
 plt.legend()
 plt.show()
 for timedata in times[1:len(times)]:
-    plt.plot(iteras, timedata, label="Version " + str(versions[times.index(timedata)]))
+    plt.plot(iteras, timedata, label= str(version_names[times.index(timedata)]))
 plt.ylabel('Speed up')
 plt.xlabel('Iteration')
 plt.legend()
