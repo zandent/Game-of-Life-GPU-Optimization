@@ -1093,7 +1093,7 @@ char* bit_game_of_life (char* outboard,
 
     double timeStampD = getTimeStamp() ;
     double total_time = timeStampD - timeStampA;
-    printf("CPU bit game_of_life: %.6f\n", total_time);
+    printf("CPU game_of_life: %.6f\n", total_time);
     /* 
      * We return the output board, so that we know which one contains
      * the final result (because we've been swapping boards around).
